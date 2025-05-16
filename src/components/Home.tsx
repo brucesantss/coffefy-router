@@ -1,82 +1,148 @@
-import { useState } from "react"
-import { Input } from "./ui/input"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
-import { redirect, useNavigate } from "react-router-dom";
+type Item = {
+  id: number;
+  title: string;
+  img: string;
+  price: number;
+  quantity: number;
+};
+
+const produtos: Omit<Item, "quantity">[] = [
+  {
+    id: 1,
+    title: "Café Expresso",
+    img: "/coffe.png", // Certifique-se que as imagens estejam na pasta public
+    price: 2.5,
+  },
+  {
+    id: 2,
+    title: "Croissant",
+    img: "/croissant.png",
+    price: 5.0,
+  },
+];
 
 export const Home = () => {
+  const [numeroMesa, setNumeroMesa] = useState<number | null>(null);
+  const [isSetNumeroMesa, setIsSetNumeroMesa] = useState(false);
+  const [pedido, setPedido] = useState<Item[]>([]);
+  const navigate = useNavigate();
 
-    const [numeroMesa, setNumeroMesa] = useState<number | null>(null);
-    const [isSetNumeroMesa, setIsSetNumeroMesa] = useState<boolean | null>(false);
+  const handleContinuar = () => {
+    if (numeroMesa && numeroMesa > 0) {
+      setIsSetNumeroMesa(true);
+    }
+  };
 
-    const [quantidade, setQuantidade] = useState<number>(0);
+  const incrementar = (id: number) => {
+    setPedido((prev) => {
+      const existe = prev.find((item) => item.id === id);
+      if (existe) {
+        return prev.map((item) =>
+          item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      const produto = produtos.find((p) => p.id === id)!;
+      return [...prev, { ...produto, quantity: 1 }];
+    });
+  };
 
-    const handleContinuar = () => {
-        if (numeroMesa && numeroMesa > 0) {
-            setIsSetNumeroMesa(true);
-        }
-    };
+  const decrementar = (id: number) => {
+    setPedido((prev) => {
+      const existe = prev.find((item) => item.id === id);
+      if (!existe) return prev;
 
-    const navigate = useNavigate();
+      if (existe.quantity === 1) {
+        return prev.filter((item) => item.id !== id);
+      }
 
-    const handlePedido = () => {
-        navigate("/pedido", {
-            state: {
-                mesa: numeroMesa,
-                quantidade: quantidade
-            }
-        });
-    };
+      return prev.map((item) =>
+        item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+      );
+    });
+  };
 
-    return (
+  const handlePedido = () => {
+    navigate("/pedido", {
+      state: {
+        mesa: numeroMesa,
+        pedido: pedido,
+      },
+    });
+  };
 
-        <div className="w-screen h-screen flex flex-col items-center justify-center">
-
-            {!isSetNumeroMesa ? (
-                <div className="flex flex-col gap-4 w-80 text-center">
-                    <h1 className="font-semibold">Digite o número da sua mesa :)</h1>
-                    <Input placeholder="Exemplo: 20" onChange={(e) => setNumeroMesa(parseInt(e.target.value))} />
-
-                    <Button onClick={handleContinuar} className="bg-green-400">Continuar</Button>
-                </div>
-            ) : (
-                <div className="flex flex-col gap-4 w-80 text-center justify-center items-center">
-                    <h1 className="font-semibold">Número da mesa: {numeroMesa}</h1>
-
-                    <div className="w-[250px] h-[500px] shadow-md flex flex-col items-center justify-center">
-
-                        <h2 className="text-2xl font-semibold">Café <br /> Expresso</h2>
-
-                        <img src="../src/assets/coffe.png" className="w-40 mt-8" />
-
-                        <div className="flex gap-4 justify-center items-center">
-
-                            <div
-                                onClick={() => quantidade > 0 ? setQuantidade(quantidade - 1) : ''}
-                                className="w-10 h-10 bg-green-600 rounded-full text-white justify-center items-center flex"> <ArrowLeft /></div>
-
-                            <span className="text-2xl font-semibold">{quantidade}</span>
-
-                            <div
-                                onClick={() => setQuantidade(quantidade + 1)}
-                                className="w-10 h-10 bg-green-600 rounded-full text-white justify-center items-center flex"> <ArrowRight /></div>
-
-
-                        </div>
-
-                        <Button className="mt-10" variant={"outline"} onClick={handlePedido}>Fazer pedido</Button>
-
-                    </div>
-                </div>
-            )}
-
-
-
-
-
+  return (
+    <div className="w-screen h-screen flex items-center justify-center p-4">
+      {!isSetNumeroMesa ? (
+        <div className="flex flex-col gap-4 w-80 text-center">
+          <h1 className="font-semibold text-xl">Digite o número da sua mesa :)</h1>
+          <Input
+            type="number"
+            placeholder="Exemplo: 20"
+            onChange={(e) => setNumeroMesa(parseInt(e.target.value))}
+          />
+          <Button onClick={handleContinuar} className="bg-green-500 text-white">
+            Continuar
+          </Button>
         </div>
+      ) : (
+        <div className="flex flex-col items-center gap-6">
+          <h1 className="text-lg font-semibold">Número da mesa: {numeroMesa}</h1>
 
-    )
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {produtos.map((item) => {
+              const itemPedido = pedido.find((p) => p.id === item.id);
+              const quantidade = itemPedido?.quantity || 0;
 
-}
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-col items-center shadow-md p-4 rounded-md"
+                >
+                  <h2 className="text-xl font-semibold mb-2">{item.title}</h2>
+                  <img
+                    src={item.img}
+                    alt={item.title}
+                    className="w-32 h-32 object-contain mb-4"
+                  />
+
+                  <div className="flex gap-4 items-center">
+                    <button
+                      onClick={() => decrementar(item.id)}
+                      className="w-10 h-10 bg-green-600 rounded-full text-white flex justify-center items-center"
+                    >
+                      <ArrowLeft />
+                    </button>
+
+                    <span className="text-xl font-bold">{quantidade}</span>
+
+                    <button
+                      onClick={() => incrementar(item.id)}
+                      className="w-10 h-10 bg-green-600 rounded-full text-white flex justify-center items-center"
+                    >
+                      <ArrowRight />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <Button
+            className="mt-4"
+            variant="outline"
+            onClick={handlePedido}
+            disabled={pedido.length === 0}
+          >
+            Fazer pedido
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
